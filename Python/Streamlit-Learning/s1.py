@@ -1,41 +1,35 @@
 #!/usr/bin/env python3
 import streamlit as st
+
 import pandas as pd
+import numpy as np
+
+df = pd.DataFrame(np.random.randn(50, 20),
+                  columns=('col %d' % i for i in range(20)))
+
+st.dataframe(df.style.highlight_max(axis=0))
 
 
+# Cache the dataframe so it's only loaded once
 @st.cache_data
-def get_UN_data():
-    AWS_BUCKET_URL = "http://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-    df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
-    return df.set_index("Region")
+def load_data():
+    return pd.DataFrame({
+        "first column": [1, 2, 3, 4],
+        "second column": [10, 20, 30, 40],
+    })
 
 
-try:
-    df = get_UN_data()
-    countries = st.multiselect("Choose countries", list(df.index),
-                               ["China", "United States of America"])
-    if not countries:
-        st.error("Please select at least one country.")
-    else:
-        data = df.loc[countries]
-        data /= 1000000.0
-        st.write("### Gross Agricultural Production ($B)", data.sort_index())
+# Boolean to resize the dataframe, stored as a session state variable
+UCWidth = st.checkbox("Use container width",
+                      value=False,
+                      key="use_container_width")
 
-        data = data.T.reset_index()
-        data = pd.melt(data, id_vars=[
-            "index"
-        ]).rename(columns={
-            "index": "year",
-            "value": "Gross Agricultural Product ($B)"
-        })
-        chart = (alt.Chart(data).mark_area(opacity=0.3).encode(
-            x="year:T",
-            y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
-            color="Region:N",
-        ))
-        st.altair_chart(chart, use_container_width=True)
-except URLError as e:
-    st.error("""
-        **This demo requires internet access.**
-        Connection error: %s
-    """ % e.reason)
+df = load_data()
+
+# Display the dataframe and allow the user to stretch the dataframe
+# across the full width of the container, based on the checkbox value
+st.dataframe(df, use_container_width=st.session_state.use_container_width)
+# st.dataframe(df, use_container_width=UCWidth)
+
+title = st.text_input('Element name', 'DEFAULT VALUE')
+st.write('The default value is:', title)
